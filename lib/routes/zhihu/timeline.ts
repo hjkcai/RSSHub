@@ -76,14 +76,6 @@ async function handler(ctx) {
      */
     const getOne = (list) => list.find((e) => e !== undefined && e !== null);
 
-    const buildActors = (e) => {
-        const actors = e.actors;
-        if (!actors) {
-            return '';
-        }
-        return actors.map((e) => e.name).join(', ');
-    };
-
     const getContent = (content) => {
         if (!content || !Array.isArray(content)) {
             return content;
@@ -105,7 +97,7 @@ async function handler(ctx) {
         }
         const link = buildLink(e);
         return {
-            title: `${e.action_text_tpl.replace('{}', buildActors(e))}: ${getOne([e.target.title, e.target.question ? e.target.question.title : ''])}`,
+            title: getOne([e.target.title, e.target.question ? e.target.question.title : '']),
             description: processImage(`<div>${getOne([e.target.content_html, getContent(e.target.content), e.target.detail, e.target.excerpt, ''])}</div>`),
             pubDate: parseDate(e.updated_time * 1000),
             link,
@@ -115,28 +107,12 @@ async function handler(ctx) {
     };
 
     const out = feeds
-        .filter((e) => e.verb && e.verb !== 'MEMBER_VOTEUP_ARTICLE' && e.verb !== 'MEMBER_VOTEUP_ANSWER')
-        .map((e) => {
+        .filter((e) => e && e.type && e.type !== 'feed_advert')
+        .flatMap((e) => {
             if (e && e.type && e.type === 'feed_group') {
-                // A feed group contains a list of feeds whose structure is the same as a single feed
-                const title = e.group_text.replace('{LIST_COUNT}', e.list.length);
-                const description =
-                    e.list && Array.isArray(e.list)
-                        ? e.list
-                              .map((e) => buildItem(e))
-                              .map((e) => `<a href="${e.link}"><b>${e.title}</b></a><br><p>${e.description}</p><br>`)
-                              .join('')
-                        : '';
-                const pubDate = e.list && Array.isArray(e.list) && e.list.length > 0 ? parseDate(e.list[0].updated_time * 1000) : new Date();
-                const guid = e.link;
-                return {
-                    title,
-                    description,
-                    pubDate,
-                    guid,
-                };
+                return e.list.map(buildItem);
             }
-            return buildItem(e);
+            return [buildItem(e)];
         });
 
     return {
