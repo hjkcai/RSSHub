@@ -56,7 +56,7 @@ async function handler(ctx) {
             item = item.templateMaterial ?? item;
             return {
                 title: item.widgetTitle.replaceAll(/<\/?em>/g, ''),
-                author: item.author,
+                author: item.authorName,
                 pubDate: parseDate(item.publishTime),
                 link: `${rootUrl}/${path === '/newsflashes' ? 'newsflashes' : 'p'}/${item.itemId}`,
                 description: item.widgetContent ?? item.content,
