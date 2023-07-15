@@ -44,7 +44,7 @@ async function handler() {
                 case 'answer':
                     return {
                         title: item.target.question.title,
-                        description: `${item.target.author.name}的回答<br/><br/>${processImage(item.target.content)}`,
+                        description: processImage(item.target.content),
                         author: item.target.author.name,
                         pubDate: parseDate(item.target.updated_time * 1000),
                         guid: item.target.id.toString(),
