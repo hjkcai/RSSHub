@@ -4,7 +4,7 @@ import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { load } from 'cheerio';
 
-const get_url = (caty) => `https://${caty}.ithome.com/`;
+const get_url = (caty) => (caty === 'newest' ? 'https://www.ithome.com/blog/' : `https://${caty}.ithome.com/`);
 
 const config = {
     it: {
@@ -33,6 +33,9 @@ const config = {
     },
     next: {
         title: '智能时代',
+    },
+    newest: {
+        title: '最新',
     },
 };
 
@@ -79,13 +82,15 @@ async function handler(ctx) {
                 link: item.attr('href'),
             };
         })
-        .get();
+        .get()
+        .filter((item) => !item.link.includes('lapin.ithome.com'));
 
     const items = await Promise.all(
         list.map((item) =>
             cache.tryGet(item.link, async () => {
                 const res = await got({ method: 'get', url: item.link });
                 const content = load(res.data);
+                content('.ad-tips').remove();
                 const post = content('#paragraph');
                 post.find('img[data-original]').each((_, ele) => {
                     ele = $(ele);
