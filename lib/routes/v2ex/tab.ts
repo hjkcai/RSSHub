@@ -53,6 +53,7 @@ async function handler(ctx) {
                         const content = post.find('.reply_content').html();
                         const author = post.find('.dark').first().text();
                         const no = post.find('.no').text();
+                        return `<hr><p><code style="margin-right:4px">#${no}</code> <i>${author}</i><p>${content}</p>`;
                         return `<p><div>#${no}: <i>${author}</i></div><div>${content}</div></p>`;
                     })
                     .join('');
