@@ -5,7 +5,7 @@ import type { DataItem, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 
-const get_url = (caty) => `https://${caty}.ithome.com/`;
+const get_url = (caty) => (caty === 'newest' ? 'https://www.ithome.com/blog' : `https://${caty}.ithome.com/`);
 
 const config = {
     it: {
@@ -34,6 +34,9 @@ const config = {
     },
     next: {
         title: '智能时代',
+    },
+    newest: {
+        title: '最新',
     },
 };
 
