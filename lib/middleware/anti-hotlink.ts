@@ -80,10 +80,34 @@ const replaceUrls = ($: CheerioAPI, selector: string, template: string, attribut
     });
 };
 
+const rewriteSrcset = (srcset: string, template: string) =>
+    srcset
+        .split(',')
+        .map((candidate) => {
+            const trimmed = candidate.trim();
+            if (!trimmed) {
+                return candidate;
+            }
+            const [url, ...descriptors] = trimmed.split(/\s+/);
+            const replaced = replaceUrl(template, url);
+            return descriptors.length > 0 ? `${replaced} ${descriptors.join(' ')}` : replaced;
+        })
+        .join(', ');
+
+const replaceSrcset = ($: CheerioAPI, selector: string, template: string) => {
+    $(selector).each((_, el) => {
+        const srcset = $(el).attr('srcset');
+        if (srcset) {
+            $(el).attr('srcset', rewriteSrcset(srcset, template));
+        }
+    });
+};
+
 const process = (html: string, image_hotlink_template?: string, multimedia_hotlink_template?: string) => {
     const $ = load(html, undefined, false);
     if (image_hotlink_template) {
         replaceUrls($, 'img, picture > source', image_hotlink_template);
+        replaceSrcset($, 'img, picture > source', image_hotlink_template);
         replaceUrls($, 'video[poster]', image_hotlink_template, 'poster');
         replaceUrls($, '*[data-rsshub-image="href"]', image_hotlink_template, 'href');
     }

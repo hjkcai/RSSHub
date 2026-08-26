@@ -1,3 +1,4 @@
+import { load } from 'cheerio';
 import { Context } from 'hono';
 import Parser from 'rss-parser';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
@@ -484,5 +485,32 @@ describe('anti-hotlink edge cases', () => {
         await antiHotlink(ctx, async () => {});
 
         expect(data.image).toBe('https://example.com/img.jpg');
+    });
+
+    it('rewrites img and picture source srcset through the hotlink template', async () => {
+        const { config } = await import('@/config');
+        config.feature.allow_user_hotlink_template = true;
+
+        const { default: antiHotlink } = await import('@/middleware/anti-hotlink');
+        const data: Data = {
+            title: 'test',
+            item: [
+                {
+                    title: 'gta',
+                    description:
+                        '<img src="https://img.ithome.com/a.jpg" srcset="https://img.ithome.com/a.jpg 2x, https://img.ithome.com/b.jpg 3x">' +
+                        '<picture><source srcset="https://img.ithome.com/c.jpg 2x"><img src="https://img.ithome.com/c.jpg"></picture>',
+                },
+            ],
+        };
+        const ctx = createCtx({ image_hotlink_template: 'https://feed.hjk.is/feedimg/?url=${href_ue}' }, data);
+
+        await antiHotlink(ctx, async () => {});
+
+        const $ = load(data.item![0].description!);
+        expect($('img').eq(0).attr('src')).toBe('https://feed.hjk.is/feedimg/?url=https%3A%2F%2Fimg.ithome.com%2Fa.jpg');
+        expect($('img').eq(0).attr('srcset')).toBe('https://feed.hjk.is/feedimg/?url=https%3A%2F%2Fimg.ithome.com%2Fa.jpg 2x, https://feed.hjk.is/feedimg/?url=https%3A%2F%2Fimg.ithome.com%2Fb.jpg 3x');
+        expect($('picture > source').attr('srcset')).toBe('https://feed.hjk.is/feedimg/?url=https%3A%2F%2Fimg.ithome.com%2Fc.jpg 2x');
+        expect($('picture img').attr('src')).toBe('https://feed.hjk.is/feedimg/?url=https%3A%2F%2Fimg.ithome.com%2Fc.jpg');
     });
 });
