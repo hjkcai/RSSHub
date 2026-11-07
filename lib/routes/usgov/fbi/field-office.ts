@@ -4,6 +4,7 @@ import InvalidParameterError from '@/errors/types/invalid-parameter';
 import type { Data, Route } from '@/types';
 import { getRouteLimit } from '@/utils/route-limit';
 
+import { isTranslationEnabled } from '../translate';
 import { fetchFeedArticleItems } from '../utils';
 
 const ROOT_URL = 'https://www.fbi.gov';
@@ -39,6 +40,8 @@ async function handler(ctx: Context): Promise<Data> {
         link: listUrl,
         description: `News and press releases from the FBI ${office} field office.`,
         language: 'en',
-        item: await fetchFeedArticleItems(`${listUrl}/rss.xml`, `fbi-field-office-${office}`, getRouteLimit(ctx, 20)),
+        item: await fetchFeedArticleItems(`${listUrl}/rss.xml`, `fbi-field-office-${office}`, getRouteLimit(ctx, 20), {
+            translate: isTranslationEnabled(),
+        }),
     };
 }

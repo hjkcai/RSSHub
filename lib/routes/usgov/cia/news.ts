@@ -5,6 +5,7 @@ import InvalidParameterError from '@/errors/types/invalid-parameter';
 import type { Data, Route } from '@/types';
 import { getRouteLimit } from '@/utils/route-limit';
 
+import { isTranslationEnabled } from '../translate';
 import { fetchArticleItems, fetchText, parseOfficialDate } from '../utils';
 
 const ROOT_URL = 'https://www.cia.gov';
@@ -51,7 +52,8 @@ async function handler(ctx: Context): Promise<Data> {
             list.map((entry) => ({
                 sourceId: `cia-${section}`,
                 ...entry,
-            }))
+            })),
+            { translate: isTranslationEnabled() }
         ),
     };
 }

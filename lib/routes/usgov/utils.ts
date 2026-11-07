@@ -15,6 +15,8 @@ import { parseDate } from '@/utils/parse-date';
 import parser from '@/utils/rss-parser';
 import timezone from '@/utils/timezone';
 
+import { translateBody } from './translate';
+
 const INTERSTITIAL_MARKER = 'bm-verify';
 const MAX_INTERSTITIAL_ATTEMPTS = 3;
 const OFFICIAL_DATE_PATTERN = /[A-Z][a-z]+ \d{1,2}, \d{4}/;
@@ -65,16 +67,21 @@ type CachedArticle = Omit<ParsedArticle, 'pubDate'> & {
     finalUrl: string;
 };
 
+type FetchOptions = {
+    /** Add a Chinese paragraph after each English one. Off keeps the feed English-only. */
+    translate?: boolean;
+};
+
 /**
  * Fetches a batch of articles. A single unreadable article is logged and skipped, so the rest of
  * the feed still reaches the archive.
  */
-export const fetchArticleItems = async (seeds: ArticleSeed[]): Promise<DataItem[]> => {
+export const fetchArticleItems = async (seeds: ArticleSeed[], options: FetchOptions = {}): Promise<DataItem[]> => {
     const items = await pMap(
         seeds,
         async (seed) => {
             try {
-                return await fetchArticleItem(seed);
+                return await fetchArticleItem(seed, options);
             } catch (error) {
                 logger.error(`Skipping ${seed.link}: ${error}`);
                 return;
@@ -90,7 +97,7 @@ export const fetchArticleItems = async (seeds: ArticleSeed[]): Promise<DataItem[
  * Fetches one official article and turns it into a feed item. Failures are the caller's problem,
  * so this throws and lets {@link fetchArticleItems} skip just that item.
  */
-const fetchArticleItem = async ({ sourceId, link, title, pubDate }: ArticleSeed): Promise<DataItem> => {
+const fetchArticleItem = async ({ sourceId, link, title, pubDate }: ArticleSeed, options: FetchOptions): Promise<DataItem> => {
     const article = await cache.tryGet<CachedArticle>(`usgov:article:${link}`, async () => {
         const page = await fetchText(link);
         const parsed = parseArticle(page.url, page.html);
@@ -102,15 +109,16 @@ const fetchArticleItem = async ({ sourceId, link, title, pubDate }: ArticleSeed)
         };
     });
     const description = article.description ?? '';
+    // The GUID hashes the official text only, so a translation appearing later updates the same
+    // Feedbin entry instead of being archived as a new revision.
+    const guid = `${sourceId}:${link}:${md5(toPlainText(description))}`;
 
     return {
-        // The GUID changes with the official text, so Feedbin archives a revision as a new entry
-        // while a re-crawl of unchanged text keeps the same identity.
-        guid: `${sourceId}:${link}:${md5(toPlainText(description))}`,
+        guid,
         title: article.title || title || link,
         link,
         pubDate: article.pubDate ? new Date(article.pubDate) : pubDate,
-        description,
+        description: options.translate ? await translateBody(description) : description,
         author: article.author,
         category: article.category,
         attachments: collectPdfAttachments(description, article.finalUrl),
@@ -121,7 +129,7 @@ const fetchArticleItem = async ({ sourceId, link, title, pubDate }: ArticleSeed)
  * Fetches an official feed and turns its entries into full-text articles. Falls back to `<guid>`
  * because the FBI feeds omit `<link>` entirely.
  */
-export const fetchFeedArticleItems = async (feedUrl: string, sourceId: string, limit: number): Promise<DataItem[]> => {
+export const fetchFeedArticleItems = async (feedUrl: string, sourceId: string, limit: number, options: FetchOptions = {}): Promise<DataItem[]> => {
     const { html } = await fetchText(feedUrl);
     const feed = await parser.parseString(html);
 
@@ -137,7 +145,8 @@ export const fetchFeedArticleItems = async (feedUrl: string, sourceId: string, l
                       pubDate: entry.pubDate ? parseDate(entry.pubDate) : undefined,
                   }
                 : [];
-        })
+        }),
+        options
     );
 };
 

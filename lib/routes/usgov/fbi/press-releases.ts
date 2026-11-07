@@ -3,6 +3,7 @@ import type { Context } from 'hono';
 import type { Data, Route } from '@/types';
 import { getRouteLimit } from '@/utils/route-limit';
 
+import { isTranslationEnabled } from '../translate';
 import { fetchFeedArticleItems } from '../utils';
 
 const SOURCE_ID = 'fbi-press-releases';
@@ -29,6 +30,6 @@ async function handler(ctx: Context): Promise<Data> {
         link: LIST_URL,
         description: 'National press releases from the U.S. Federal Bureau of Investigation.',
         language: 'en',
-        item: await fetchFeedArticleItems(FEED_URL, SOURCE_ID, getRouteLimit(ctx, 20)),
+        item: await fetchFeedArticleItems(FEED_URL, SOURCE_ID, getRouteLimit(ctx, 20), { translate: isTranslationEnabled() }),
     };
 }
