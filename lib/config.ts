@@ -790,6 +790,9 @@ const toBoolean = (value: string | undefined, defaultValue: boolean) => {
 
 const toInt = (value: string | undefined, defaultValue?: number) => (value === undefined ? defaultValue : Number.parseInt(value));
 
+// parseInt truncates "0.3" to 0, so fractional settings must go through here.
+const toFloat = (value: string | undefined, defaultValue?: number) => (value === undefined ? defaultValue : Number(value));
+
 const getAssetsUrl = (rootUrl: string, assetsUrl?: string) => {
     if (assetsUrl) {
         return assetsUrl.replace(/\/+$/, '');
@@ -919,7 +922,7 @@ const calculateValue = () => {
         openai: {
             apiKey: envs.OPENAI_API_KEY,
             model: envs.OPENAI_MODEL || 'gpt-3.5-turbo-16k',
-            temperature: toInt(envs.OPENAI_TEMPERATURE, 0.2),
+            temperature: toFloat(envs.OPENAI_TEMPERATURE, 1),
             maxTokens: toInt(envs.OPENAI_MAX_TOKENS, 0) || undefined,
             endpoint: envs.OPENAI_API_ENDPOINT || 'https://api.openai.com/v1',
             inputOption: envs.OPENAI_INPUT_OPTION || 'description',
